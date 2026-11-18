@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Atom,
   ChevronLeft,
@@ -28,6 +28,9 @@ export function App() {
   const [activeHookId, setActiveHookId] = useState<string>(HOOKS_LIST[0].id);
   const [focusMode, setFocusMode] = useState<boolean>(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const sidebarRef = useRef<HTMLElement>(null);
+  const programmaticScrollUntilRef = useRef<number>(0);
+  const pendingScrollIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -51,11 +54,107 @@ export function App() {
     return filteredHooks.find((h) => h.id === activeHookId) ?? filteredHooks[0];
   }, [filteredHooks, activeHookId]);
 
+  const scrollToHookElement = useCallback((hookId: string) => {
+    const el = document.getElementById(hookId);
+    if (!el) return false;
+    programmaticScrollUntilRef.current = Date.now() + 650;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
+  }, []);
+
+  // Cập nhật mục lục active tự động khi người dùng cuộn trang ở chế độ Xem tất cả
+  useEffect(() => {
+    if (focusMode || filteredHooks.length === 0) return;
+
+    let rafId = 0;
+
+    const updateActiveHookOnScroll = () => {
+      rafId = 0;
+      if (Date.now() < programmaticScrollUntilRef.current) return;
+
+      const docEl = document.documentElement;
+      const reachedBottom =
+        window.scrollY > 0 &&
+        docEl.scrollHeight > window.innerHeight &&
+        window.innerHeight + window.scrollY >= docEl.scrollHeight - 20;
+
+      if (reachedBottom) {
+        setActiveHookId(filteredHooks[filteredHooks.length - 1].id);
+        return;
+      }
+
+      const headerThreshold = 140;
+      let currentId = filteredHooks[0].id;
+
+      for (const hook of filteredHooks) {
+        const el = document.getElementById(hook.id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= headerThreshold) {
+          currentId = hook.id;
+        } else {
+          break;
+        }
+      }
+
+      setActiveHookId(currentId);
+    };
+
+    const handleScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(updateActiveHookOnScroll);
+    };
+
+    const cancelProgrammaticLock = () => {
+      programmaticScrollUntilRef.current = 0;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', cancelProgrammaticLock, { passive: true });
+    window.addEventListener('touchmove', cancelProgrammaticLock, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', cancelProgrammaticLock);
+      window.removeEventListener('touchmove', cancelProgrammaticLock);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, [focusMode, filteredHooks]);
+
+  // Cuộn tới hook đang chờ nếu danh sách vừa bỏ bộ lọc để hiện lại đủ 15 hooks
+  useEffect(() => {
+    const pendingId = pendingScrollIdRef.current;
+    if (!pendingId || focusMode) return;
+    if (scrollToHookElement(pendingId)) {
+      pendingScrollIdRef.current = null;
+    }
+  }, [filteredHooks, focusMode, scrollToHookElement]);
+
+  // Giữ mục đang active luôn nằm trong vùng nhìn thấy của sidebar (chỉ cuộn nội bộ sidebar)
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar || sidebar.scrollHeight <= sidebar.clientHeight) return;
+    const activeBtn = sidebar.querySelector<HTMLButtonElement>(
+      `[data-hook-id="${activeHookId}"]`
+    );
+    if (!activeBtn) return;
+
+    const sidebarRect = sidebar.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    const relativeTop = btnRect.top - sidebarRect.top;
+    const relativeBottom = btnRect.bottom - sidebarRect.top;
+
+    if (relativeTop < 12) {
+      sidebar.scrollTop += relativeTop - 12;
+    } else if (relativeBottom > sidebar.clientHeight - 12) {
+      sidebar.scrollTop += relativeBottom - sidebar.clientHeight + 12;
+    }
+  }, [activeHookId]);
+
   const handleSelectHook = (hookId: string) => {
     setActiveHookId(hookId);
     if (!focusMode) {
-      const el = document.getElementById(hookId);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!scrollToHookElement(hookId)) {
+        pendingScrollIdRef.current = hookId;
+      }
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -117,7 +216,7 @@ export function App() {
       </header>
 
       <div className="app-layout">
-        <aside className="sidebar" aria-label="Danh sách 15 React Hooks">
+        <aside ref={sidebarRef} className="sidebar" aria-label="Danh sách 15 React Hooks">
           <h2 className="sidebar-heading">Mục lục 15 Hooks (Phổ biến → Ít dùng)</h2>
           <ul className="sidebar-list">
             {HOOKS_LIST.map((hook) => {
@@ -126,6 +225,7 @@ export function App() {
                 <li key={hook.id}>
                   <button
                     type="button"
+                    data-hook-id={hook.id}
                     className={`sidebar-item-btn ${isActive ? 'active' : ''}`}
                     onClick={() => {
                       setSelectedCategory('Tất cả');

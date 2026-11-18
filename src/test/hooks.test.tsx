@@ -196,4 +196,41 @@ describe('15 React Hooks + TypeScript Concise Demos', () => {
     fireEvent.click(within(livePreview).getByRole('button', { name: 'Tăng (+)' }));
     expect(within(livePreview).getByText('Giá trị:')).toHaveTextContent('Giá trị: 1');
   });
+
+  it('App scroll-spy: tự động đổi active mục lục sidebar khi cuộn tới useLayoutEffect', () => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 1;
+    });
+
+    render(<App />);
+
+    // Giả lập vị trí top của các section khi người dùng cuộn tới #08 useLayoutEffect
+    HOOKS_LIST.forEach((hook, index) => {
+      const section = document.getElementById(hook.id)!;
+      const simulatedTop = (index - 7) * 500 + 85; // #08 (index 7) nằm tại top = 85px
+      vi.spyOn(section, 'getBoundingClientRect').mockReturnValue({
+        top: simulatedTop,
+        bottom: simulatedTop + 450,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 450,
+        x: 0,
+        y: simulatedTop,
+        toJSON: () => ({}),
+      });
+    });
+
+    act(() => {
+      fireEvent.scroll(window);
+    });
+
+    const layoutSidebarBtn = document.querySelector('[data-hook-id="useLayoutEffect"]');
+    const effectSidebarBtn = document.querySelector('[data-hook-id="useEffect"]');
+    expect(layoutSidebarBtn).toHaveClass('active');
+    expect(effectSidebarBtn).not.toHaveClass('active');
+
+    vi.restoreAllMocks();
+  });
 });
