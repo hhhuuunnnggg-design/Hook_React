@@ -1,5 +1,9 @@
 # Hook_React — Học 15 React Hooks với TypeScript & Live UI
 
+[![CI/CD - Build, Test & Deploy](https://github.com/hhhuuunnnggg-design/Hook_React/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/hhhuuunnnggg-design/Hook_React/actions/workflows/ci-cd.yml)
+
+**Live Demo:** https://hhhuuunnnggg-design.github.io/Hook_React/
+
 Ứng dụng học tập tương tác tổng hợp **15 React Hooks** từ `Danh sách tất cả React Hooks.docx`, xây dựng bằng **React 18 + TypeScript + Vite**.
 
 Mỗi Hook trên trang được trình bày theo 3 phần nối tiếp nhau:

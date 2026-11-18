@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite --port 5173",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --base=/Hook_React/",
     "preview": "vite preview --port 4173",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.460.0",
