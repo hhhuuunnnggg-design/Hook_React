@@ -251,7 +251,7 @@ export function App() {
             <p>
               Mỗi hook gồm 3 phần nối tiếp nhau: <strong>Giải thích công dụng</strong> →{' '}
               <strong>Code React + TypeScript thực tế</strong> →{' '}
-              <strong>Giao diện chạy thật ngay bên dưới</strong> để bạn bấm nút và kiểm chứng ngay lập tức.
+              <strong>Giao diện chạy thật ngay bên dưới</strong> để bạn bấm nút và kiểm chứng ngay lập tức mà không cần đợi.
             </p>
           </div>
 
